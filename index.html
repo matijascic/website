@@ -162,6 +162,7 @@
             font-size: 13px;
             color: var(--fg-muted);
             margin-top: 1px;
+            font-style: italic;
         }
 
         .exp-desc {
@@ -179,54 +180,6 @@
             color: var(--fg-muted);
             font-style: italic;
         }
-
-        .link-list {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px 20px;
-        }
-
-        .link-list li::before {
-            content: "→ ";
-        }
-
-        .link-list a {
-            font-size: 15px;
-            margin: 0;
-        }
-
-        .skill-list {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px 16px;
-            font-size: 14px;
-            margin-top: 8px;
-        }
-
-        .skill-list li::before {
-            content: "· ";
-        }
-
-        footer {
-            margin-top: 60px;
-            border-top: 1px solid var(--border);
-            padding-top: 12px;
-            text-align: center;
-            font-size: 12px;
-            color: var(--fg-muted);
-            font-style: italic;
-        }
-
-        .counter {
-            display: inline-block;
-            background: var(--counter-bg);
-            color: var(--counter-fg);
-            font-family: Courier New, Courier, monospace;
-            font-size: 12px;
-            padding: 2px 6px;
-            letter-spacing: 2px;
-            margin-top: 6px;
-        }
     </style>
 
 </head>
@@ -235,13 +188,13 @@
     <div class="feed">
         <button id="theme-toggle" onclick="toggleTheme()">dark</button>
         <header class="site-header">
+            <h1>Hugo Matijascic</h1>
             <p class="tagline">systems engineer at<a href="https://tdnde.com" target="_blank"
                     rel="noopener noreferrer">TDNDE</a></p>
             <nav>
-                <a href="#about">about</a> |
-                <a href="#projects">projects</a> |
-                <a href="#writing">writing</a> |
-                <a href="#links">links</a>
+                <a href="https://github.com/matijascic" target="_blank" rel="noopener noreferrer">github</a>
+                <a href="https://linkedin.com/in/hugo-matijascic" target="_blank" rel="noopener noreferrer">linkedin</a>
+                <a>hugomatijascic@gmail.com</a>
             </nav>
         </header>
 
@@ -251,10 +204,6 @@
                 Computer engineering graduate from Ecole Polytechnique de Montréal, currently building
                 automated systems for non-destructive evaluation in the manufacturing industry.
             </p>
-            <p>
-                My work revolves around intensive multi-dimensional data processing, computer vision, real-time
-                embedded pipelines, data-driven algorithms, and systems design for industrial environments.
-            </p>
         </section>
 
         <section class="section" id="experience">
@@ -263,24 +212,94 @@
                 <li>
                     <div class="exp-header">
                         <span class="exp-role">Systems Engineer</span>
-                        <span class="exp-date">Apr 2025 - present</span>
+                        <span class="exp-date">Jan 2025 - present</span>
                     </div>
                     <div class="exp-company"><a href="https://tdnde.com" target="_blank"
-                            rel="noopener noreferrer">TDNDE</a></div>
+                            rel="noopener noreferrer">TDNDE</a> ·
+                        Full-time</div>
                     <div class="exp-desc">
-                        Design and integration of computer systems for industrial NDE and robotics
-                        applications, my work focuses on mathematical algorithm development with a
-                        close collaboration with a multidisciplinary engineering team.
+                        Design and integration of computer systems for industrial NDE and robotics applications. My work
+                        focuses on mathematical
+                        algorithm development, intensive multi-dimensional data processing, computer vision, real-time
+                        embedded pipelines,
+                        data-driven algorithms, and systems design for industrial environments in close collaboration
+                        with a multidisciplinary
+                        engineering team. I work across the full system stack, from ultrasonic device interfacing and
+                        robot motion programming to complex data processing algorithms.
+                    </div>
+                </li>
+                <li>
+                    <div class="exp-header">
+                        <span class="exp-role">Software Developer</span>
+                        <span class="exp-date">Sept 2024 - present</span>
+                    </div>
+                    <div class="exp-company"><a href="https://ciusss-centresudmtl.gouv.qc.ca/" target="_blank"
+                            rel="noopener noreferrer">CIUSSS</a> · Part-time, Self-employed</div>
+                    <div class="exp-desc">
+                        I develop and maintain a control application for a circular speaker array used in deafblindness
+                        rehabilitation programs. The system assesses and trains patients' sensory abilities through
+                        precise spatial audio delivery. My responsibilities include debugging the application,
+                        refactoring its architecture for improved performance, and implementing intensive real-time
+                        audio signal processing. I design multichannel audio simulations across a 20-speaker array
+                        to generate immersive spatial sound.
+                    </div>
+                </li>
+                <li>
+                    <div class="exp-header">
+                        <span class="exp-role">Software Developer</span>
+                        <span class="exp-date">Sept 2023 - Dec 2024</span>
+                    </div>
+                    <div class="exp-company"><a href="https://tdnde.com" target="_blank"
+                            rel="noopener noreferrer">TDNDE</a> ·
+                        Part-time, Student</div>
+                    <div class="exp-desc">
+                        Developed and integrated specialized algorithms into the existing robotic
+                        inspection system. These algorithms included mesh processing techniques such as adaptive
+                        constrained deformation, point cloud registration, and adaptive path planning methods on
+                        discrete
+                        geometries (mesh, point cloud).
+                    </div>
+                </li>
+                <li>
+                    <div class="exp-header">
+                        <span class="exp-role">Software Engineering Intern</span>
+                        <span class="exp-date">May 2023 - Aug 2023</span>
+                    </div>
+                    <div class="exp-company"><a href="https://tdnde.com" target="_blank"
+                            rel="noopener noreferrer">TDNDE</a> ·
+                        Internship</div>
+                    <div class="exp-desc">
+                        Integrated a point cloud registration algorithm into the common
+                        pipeline of non-destructive technologies. Maintained an existing
+                        codebase of mesh processing for path planning programming of industrial robots.
                     </div>
                 </li>
             </ul>
-
         </section>
 
-        <!-- <section class="section" id="education">
+        <section class="section" id="education">
             <h2>education</h2>
-
-        </section> -->
+            <ul class="edu-list">
+                <li>
+                    <div class="exp-header">
+                        <span class="exp-role">Master of Engineering in Computer Engineering</span>
+                        <span class="exp-date">2025 - present</span>
+                    </div>
+                    <div class="exp-company"><a href="https://polymtl.ca" target="_blank"
+                            rel="noopener noreferrer">École
+                            Polytechnique de Montréal</a></div>
+                </li>
+                <li>
+                    <div class="exp-header">
+                        <span class="exp-role">Bachelor of Engineering in Computer Engineering</span>
+                        <span class="exp-date">2019 - 2024</span>
+                    </div>
+                    <div class="exp-company"><a href="https://polymtl.ca" target="_blank"
+                            rel="noopener noreferrer">École
+                            Polytechnique de Montréal</a></div>
+                </li>
+            </ul>
+        </section>
     </div>
 
     <script>
@@ -294,20 +313,6 @@
             document.getElementById('theme-toggle').textContent = isDark ? 'light' : 'dark';
             localStorage.setItem('theme', isDark ? 'dark' : 'light');
         }
-
-        // // This will work on GitHub Pages (but not locally with file://)
-        // fetch('blog/posts.json')
-        //     .then(response => response.json())
-        //     .then(posts => {
-        //         // Display your blog post list
-        //     });
-
-        // Load individual posts
-        fetch('blog/post1.html')
-            .then(response => response.text())
-            .then(html => {
-                // Display the post content
-            });
     </script>
 
 </body>
