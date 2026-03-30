@@ -46,6 +46,24 @@
             padding: 2px 8px;
         }
 
+        #print-btn {
+            cursor: pointer;
+            color: var(--link);
+            text-decoration: underline;
+        }
+
+        #print-btn:hover {
+            color: var(--link-hover);
+        }
+
+        @media print {
+
+            #theme-toggle,
+            #print-btn {
+                display: none !important;
+            }
+        }
+
         body {
             background-color: var(--bg);
             color: var(--fg);
@@ -208,6 +226,8 @@
             <nav>
                 <!-- <a href="https://github.com/matijascic" target="_blank">github</a> -->
                 <span class="copyable" onclick="copyEmail()">hugomatijascic@gmail.com</span>
+                <br>
+                <span id="print-btn" onclick="printPDF()">PDF</span>
                 <!-- <a href="https://linkedin.com/in/hugo-matijascic" target="_blank">linkedin</a> -->
             </nav>
         </header>
@@ -339,6 +359,10 @@
         function copyEmail() {
             navigator.clipboard.writeText('hugomatijascic@gmail.com');
             alert("Mail copied to clipboard");
+        }
+
+        function printPDF() {
+            window.print();
         }
 
         // init
