@@ -47,13 +47,16 @@
         }
 
         #print-btn {
+            position: absolute;
+            top: 46px;
+            right: 16px;
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--fg);
             cursor: pointer;
-            color: var(--link);
-            text-decoration: underline;
-        }
-
-        #print-btn:hover {
-            color: var(--link-hover);
+            font-family: monospace;
+            font-size: 12px;
+            padding: 2px 8px;
         }
 
         @media print {
@@ -61,6 +64,21 @@
             #theme-toggle,
             #print-btn {
                 display: none !important;
+            }
+
+            .exp-list li,
+            .edu-list li {
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+
+            .exp-header {
+                page-break-after: avoid;
+                break-after: avoid;
+            }
+
+            .copyable {
+                text-decoration: none;
             }
         }
 
@@ -219,23 +237,21 @@
 <body>
     <div class="feed">
         <button id="theme-toggle" aria-label="Toggle theme" onclick="toggleTheme()">dark</button>
+        <button id="print-btn" aria-label="Print resume" onclick="printPDF()">print</button>
         <header class="site-header">
             <h1>Hugo Matijascic</h1>
             <p class="tagline">systems engineer at<a href="https://tdnde.com" target="_blank"
                     rel="noopener noreferrer">TDNDE</a></p>
             <nav>
-                <!-- <a href="https://github.com/matijascic" target="_blank">github</a> -->
                 <span class="copyable" onclick="copyEmail()">hugomatijascic@gmail.com</span>
-                <br>
-                <span id="print-btn" onclick="printPDF()">PDF</span>
-                <!-- <a href="https://linkedin.com/in/hugo-matijascic" target="_blank">linkedin</a> -->
+                <a href="https://hmajestic.net">hmajestic.net</a>
             </nav>
         </header>
 
         <section class="section" id="about">
             <h2>about</h2>
             <p>
-                I build real-time systems for industrial robotics and non-destructive evaluation, specializing in
+                I build computing systems for industrial robotics and non-destructive evaluation, specializing in
                 computational geometry, 3D mesh processing, and embedded signal analysis. Currently pursuing a
                 Master's in Computer Engineering at École Polytechnique de Montréal.
             </p>
