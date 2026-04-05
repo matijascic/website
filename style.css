@@ -67,7 +67,9 @@ aside {
 }
 
 .print-btn {
-    float: right;
+    position: absolute;
+    right: 50px;
+    top: 50px;
     background: none;
     border: 1px dashed var(--border-dashed);
     color: var(--fg);
@@ -108,6 +110,7 @@ aside nav a.active {
 }
 
 main {
+    position: relative;
     padding: 40px;
     flex: 1;
     max-width: 800px;
