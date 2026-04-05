@@ -95,13 +95,13 @@ aside nav a.active {
 main {
     padding: 40px;
     flex: 1;
-    max-width: 600px;
-    margin-left: calc(150px + (100vw - 150px - 600px) / 2);
+    max-width: 800px;
+    margin-left: calc(150px + (100vw - 150px - 800px) / 2);
 }
 
 footer {
-    margin-left: calc(150px + (100vw - 150px - 600px) / 2);
-    max-width: 600px;
+    margin-left: calc(150px + (100vw - 150px - 800px) / 2);
+    max-width: 800px;
     padding: 20px 40px;
     border-top: 1px solid var(--border);
     font-size: 12px;
@@ -211,6 +211,49 @@ footer {
     font-size: 14px;
     margin-top: 4px;
     line-height: 1.55;
+}
+
+.home-intro {
+    margin-bottom: 28px;
+}
+
+.home-img {
+    width: 100%;
+    border-radius: 4px;
+}
+
+.home-img-caption {
+    font-size: 14px;
+    color: var(--fg-muted);
+    margin: 6px 0 0;
+}
+
+.home-intro p {
+    font-size: 14px;
+    line-height: 1.6;
+    margin: 0 0 8px;
+}
+
+.all-posts-link {
+    display: inline-block;
+    margin-top: 4px;
+    font-size: 12px;
+}
+
+.recent-heading {
+    font-size: 14px;
+    color: var(--fg-muted);
+    text-transform: lowercase;
+    margin: 0 0 6px;
+    font-weight: normal;
+}
+
+#recent-post .blog-item {
+    font-size: 12px;
+}
+
+#recent-post .blog-desc {
+    font-size: 11px;
 }
 
 .blog-item {

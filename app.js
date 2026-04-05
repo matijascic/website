@@ -41,6 +41,27 @@ async function loadBlogPosts() {
     }
 }
 
+async function loadRecentPost() {
+    const recentPost = document.getElementById('recent-post');
+    try {
+        const response = await fetch('blog/posts.json');
+        const posts = await response.json();
+        posts.sort((a, b) => new Date(b.date) - new Date(a.date));
+        const post = posts[0];
+        if (post) {
+            recentPost.innerHTML = `
+                <div class="blog-item">
+                    <a href="#/blog/${post.slug}">${post.date} - ${post.title}</a>
+                    <span class="blog-desc">- ${post.desc}</span>
+                </div>`;
+        } else {
+            recentPost.innerHTML = '<p>no posts yet</p>';
+        }
+    } catch (error) {
+        recentPost.innerHTML = '<p>no posts found</p>';
+    }
+}
+
 async function navigate() {
     const hash = window.location.hash.slice(1) || '/';
     const content = document.getElementById('content');
@@ -69,6 +90,10 @@ async function navigate() {
 
         if (hash === '/blog') {
             await loadBlogPosts();
+        }
+
+        if (hash === '/') {
+            await loadRecentPost();
         }
     } catch (error) {
         content.innerHTML = '<h2>404</h2><p>Page not found.</p>';
