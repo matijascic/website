@@ -33,7 +33,7 @@ async function loadBlogPosts() {
         postList.innerHTML = posts.map(post => `
             <div class="blog-item">
                 <a href="#/blog/${post.slug}">${post.date} - ${post.title}</a>
-                <span class="blog-desc">— ${post.desc}</span>
+                <span class="blog-desc">- ${post.desc}</span>
             </div>
         `).join('');
     } catch (error) {
