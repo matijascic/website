@@ -2,6 +2,7 @@ backend:
   name: github
   repo: matijascic/website
   branch: main
+  base_url: https://api.decap-cms.org
 
 media_folder: "assets/images"
 
