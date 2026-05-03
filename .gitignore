@@ -1,2 +1,4 @@
-ignore/
-build_posts.py
+vendor/
+_site/
+.bundle/
+Gemfile.lock
