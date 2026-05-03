@@ -2,41 +2,15 @@
 <html>
 
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Content Manager</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Content Manager</title>
 </head>
 
 <body>
-    <!-- Required mount point -->
-    <div id="nc-root"></div>
+  <div id="nc-root"></div>
 
-    <!-- Decap CMS script -->
-    <script src="https://unpkg.com/decap-cms@^3.0.0/dist/decap-cms.js"></script>
-
-    <!-- CMS configuration -->
-    <script type="text/yaml" id="cms-config">
-backend:
-  name: github
-  repo: matijascic/website
-  branch: main
-  base_url: https://api.decap-cms.org
-
-media_folder: "assets/images"
-
-collections:
-  - name: "blog"
-    label: "Blog"
-    folder: "_posts"
-    create: true
-    slug: "{{year}}-{{month}}-{{day}}-{{slug}}"
-    fields:
-      - { label: "Layout", name: "layout", widget: "hidden", default: "default" }
-      - { label: "Title", name: "title", widget: "string" }
-      - { label: "Date", name: "date", widget: "datetime" }
-      - { label: "Body", name: "body", widget: "markdown" }
-  </script>
-
+  <script src="https://unpkg.com/decap-cms@^3.0.0/dist/decap-cms.js"></script>
 </body>
 
 </html>
