@@ -248,17 +248,21 @@
             margin: 0 auto;
         }
 
-        .image-caption {
-            margin-top: 0.4rem;
-            font-size: 0.85rem;
-            color: var(--muted);
+        .image-title {
+            margin-top: 0.6rem;
+            font-size: 0.9rem;
+            color: var(--text);
             text-align: center;
             outline: none;
+            font-weight: 500;
+            padding-bottom: 0.3rem;
+            border-bottom: 1px solid var(--border);
         }
 
-        .image-caption:empty:before {
-            content: "alt text (optional)";
+        .image-title:empty:before {
+            content: "image title";
             color: var(--border-strong);
+            font-weight: 400;
         }
 
         .image-prompt {
@@ -544,15 +548,15 @@
                 if (block.src) {
                     const img = document.createElement('img');
                     img.src = block.src;
-                    img.alt = block.alt || '';
+                    img.alt = block.alt || block.title || '';
                     inner.appendChild(img);
 
-                    const caption = document.createElement('div');
-                    caption.className = 'image-caption';
-                    caption.contentEditable = 'true';
-                    caption.textContent = block.alt || '';
-                    caption.addEventListener('input', () => { block.alt = caption.textContent; });
-                    inner.appendChild(caption);
+                    const title = document.createElement('div');
+                    title.className = 'image-title';
+                    title.contentEditable = 'true';
+                    title.textContent = block.title || '';
+                    title.addEventListener('input', () => { block.title = title.textContent; });
+                    inner.appendChild(title);
                 } else {
                     const prompt = document.createElement('div');
                     prompt.className = 'image-prompt';
@@ -580,6 +584,7 @@
                 // clear any previous data on this block so we start fresh
                 delete block.src;
                 delete block.alt;
+                delete block.title;
                 render(); // immediately show empty state
 
                 const input = document.createElement('input');
@@ -600,6 +605,7 @@
                     reader.onload = async (ev) => {
                         block.src = ev.target.result;
                         block.alt = file.name.replace(/\.[^.]+$/, '');
+                        block.title = '';
                         const idx = state.blocks.indexOf(block);
                         render();
 
@@ -634,13 +640,15 @@
                 // clear any previous data on this block so we start fresh
                 delete block.src;
                 delete block.alt;
+                delete block.title;
                 render(); // immediately show empty state
 
                 const url = prompt('image url:', 'https://');
                 if (!url || url === 'https://') return;
-                const alt = prompt('alt text (optional):', '') || '';
+                const alt = prompt('alt text for accessibility (optional):', '') || '';
                 block.src = url;
                 block.alt = alt;
+                block.title = '';
                 const idx = state.blocks.indexOf(block);
                 render();
                 // insert new paragraph block after image
@@ -687,6 +695,7 @@
                 if (newType !== 'image') {
                     delete block.src;
                     delete block.alt;
+                    delete block.title;
                 }
                 // when becoming an image (or hr), discard whatever text was in the previous type
                 if (newType === 'image' || newType === 'hr') {
@@ -1029,7 +1038,12 @@
                             i++;
                             break;
                         case 'image':
-                            out.push(`![${block.alt || ''}](${block.src || ''})`);
+                            const imgMarkdown = `![${block.alt || block.title || ''}](${block.src || ''})`;
+                            if (block.title) {
+                                out.push(imgMarkdown + '\n*' + block.title + '*');
+                            } else {
+                                out.push(imgMarkdown);
+                            }
                             i++;
                             break;
                         case 'hr':
