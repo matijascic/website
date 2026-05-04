@@ -1,5 +1,3 @@
 title: hmat
 baseurl: ""
 permalink: /blog/:title/
-exclude:
-  - editor
