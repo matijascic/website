@@ -245,6 +245,7 @@
             max-width: 100%;
             border-radius: 6px;
             display: block;
+            margin: 0 auto;
         }
 
         .image-caption {
@@ -579,6 +580,7 @@
                 // clear any previous data on this block so we start fresh
                 delete block.src;
                 delete block.alt;
+                render(); // immediately show empty state
 
                 const input = document.createElement('input');
                 input.type = 'file';
@@ -603,8 +605,13 @@
                             await w.close();
                             block.src = path;
                             block.alt = file.name.replace(/\.[^.]+$/, '');
+                            const idx = state.blocks.indexOf(block);
                             render();
                             showToast(`saved ${path}`);
+                            // insert new paragraph block after image
+                            if (idx !== -1) {
+                                insertBlockAfter(idx);
+                            }
                         } catch (err) {
                             showToast('image save failed: ' + err.message, true);
                         }
@@ -614,8 +621,13 @@
                         reader.onload = (ev) => {
                             block.src = ev.target.result;
                             block.alt = file.name.replace(/\.[^.]+$/, '');
+                            const idx = state.blocks.indexOf(block);
                             render();
                             showToast('connect repo to save image to assets/images/', true);
+                            // insert new paragraph block after image
+                            if (idx !== -1) {
+                                insertBlockAfter(idx);
+                            }
                         };
                         reader.readAsDataURL(file);
                     }
@@ -627,13 +639,19 @@
                 // clear any previous data on this block so we start fresh
                 delete block.src;
                 delete block.alt;
+                render(); // immediately show empty state
 
                 const url = prompt('image url:', 'https://');
                 if (!url || url === 'https://') return;
                 const alt = prompt('alt text (optional):', '') || '';
                 block.src = url;
                 block.alt = alt;
+                const idx = state.blocks.indexOf(block);
                 render();
+                // insert new paragraph block after image
+                if (idx !== -1) {
+                    insertBlockAfter(idx);
+                }
             }
 
             // ---------- block operations ----------
