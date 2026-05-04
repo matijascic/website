@@ -864,6 +864,54 @@ your content here.
         updatePreview();
       });
 
+      // tab key indents instead of changing focus, escape lets you tab out
+      let tabEscapes = false;
+      contentEl.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          tabEscapes = true;
+          return;
+        }
+        if (e.key !== 'Tab') {
+          tabEscapes = false;
+          return;
+        }
+        if (tabEscapes) return; // let it move focus naturally
+
+        e.preventDefault();
+        const ta = contentEl;
+        const start = ta.selectionStart;
+        const end = ta.selectionEnd;
+        const value = ta.value;
+        const indent = '  '; // 2 spaces
+
+        // multi-line selection: indent/outdent each line
+        if (start !== end && value.slice(start, end).includes('\n')) {
+          const lineStart = value.lastIndexOf('\n', start - 1) + 1;
+          const block = value.slice(lineStart, end);
+          let newBlock;
+          if (e.shiftKey) {
+            newBlock = block.replace(/^( {1,2}|\t)/gm, '');
+          } else {
+            newBlock = block.replace(/^/gm, indent);
+          }
+          ta.setRangeText(newBlock, lineStart, end, 'preserve');
+          ta.selectionStart = lineStart;
+          ta.selectionEnd = lineStart + newBlock.length;
+        } else if (e.shiftKey) {
+          // shift+tab on single line: remove leading indent
+          const lineStart = value.lastIndexOf('\n', start - 1) + 1;
+          const line = value.slice(lineStart, start);
+          const m = line.match(/^( {1,2}|\t)/);
+          if (m) {
+            ta.setRangeText('', lineStart, lineStart + m[0].length, 'preserve');
+          }
+        } else {
+          // plain tab: insert spaces at cursor
+          ta.setRangeText(indent, start, end, 'end');
+        }
+        updatePreview();
+      });
+
       // auto-update
       ['input', 'change'].forEach(ev => {
         [titleEl, dateEl, layoutEl, tagsEl, contentEl].forEach(el => el.addEventListener(ev, updatePreview));
