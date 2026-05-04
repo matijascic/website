@@ -1,7 +1,7 @@
 backend:
   name: github
   repo: matijascic/website
-  base_url: Ov23li3CwHXfKR6NxG63
+  branch: main
 
 media_folder: "assets/images"
 public_folder: "/assets/images"
