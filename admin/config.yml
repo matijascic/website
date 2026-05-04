@@ -1,9 +1,7 @@
 backend:
   name: github
   repo: matijascic/website
-  branch: main
-  auth_type: pkce
-  app_id: Ov23li3CwHXfKR6NxG63
+  base_url: Ov23li3CwHXfKR6NxG63
 
 media_folder: "assets/images"
 public_folder: "/assets/images"
