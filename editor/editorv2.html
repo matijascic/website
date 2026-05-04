@@ -418,7 +418,7 @@
         <div class="frontmatter">
             <input type="text" class="title-input" id="title" placeholder="untitled" />
             <div class="meta-row">
-                <input type="date" id="date" />
+                <input type="datetime-local" id="date" step="1" />
                 <input type="text" id="tags" placeholder="tags (comma-separated)" style="flex:1;" />
             </div>
         </div>
@@ -576,11 +576,19 @@
             }
 
             async function uploadImageForBlock(block) {
+                // clear any previous data on this block so we start fresh
+                delete block.src;
+                delete block.alt;
+
                 const input = document.createElement('input');
                 input.type = 'file';
                 input.accept = 'image/*';
+                input.style.display = 'none';
+                document.body.appendChild(input);
+
                 input.onchange = async (e) => {
                     const file = e.target.files[0];
+                    input.remove();
                     if (!file) return;
                     const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '-').toLowerCase();
                     const path = `/assets/images/${safeName}`;
@@ -616,6 +624,10 @@
             }
 
             function addImageFromUrl(block) {
+                // clear any previous data on this block so we start fresh
+                delete block.src;
+                delete block.alt;
+
                 const url = prompt('image url:', 'https://');
                 if (!url || url === 'https://') return;
                 const alt = prompt('alt text (optional):', '') || '';
@@ -656,7 +668,17 @@
             }
 
             function changeBlockType(i, newType) {
-                state.blocks[i].type = newType;
+                const block = state.blocks[i];
+                block.type = newType;
+                // wipe stale type-specific fields so different types don't leak data into each other
+                if (newType !== 'image') {
+                    delete block.src;
+                    delete block.alt;
+                }
+                // when becoming an image (or hr), discard whatever text was in the previous type
+                if (newType === 'image' || newType === 'hr') {
+                    block.text = '';
+                }
                 // hr can't be edited — insert a paragraph after it and focus that
                 if (newType === 'hr') {
                     const newBlock = { id: nid(), type: 'paragraph', text: '' };
@@ -665,7 +687,7 @@
                     focusBlock(newBlock.id);
                     return;
                 }
-                const id = state.blocks[i].id;
+                const id = block.id;
                 render();
                 focusBlock(id, 'end');
             }
@@ -696,12 +718,9 @@
             let slashMenuOpen = false;
 
             function handleBlockKeydown(e, i, el) {
-                // when the slash menu is open, let it handle all keys
+                // when the slash menu is open, it owns all input — prevent the block from receiving anything
                 if (slashMenuOpen) {
-                    // block all keys so the menu's handler is the only one that responds
-                    if (['Enter', 'ArrowUp', 'ArrowDown', 'Escape', 'Tab'].includes(e.key)) {
-                        e.preventDefault();
-                    }
+                    e.preventDefault();
                     return;
                 }
                 // ctrl+enter creates a new paragraph block below
@@ -741,6 +760,40 @@
                     focusBlock(state.blocks[i + 1].id, 'end');
                     return;
                 }
+                // tab inserts spaces instead of moving focus
+                if (e.key === 'Tab') {
+                    e.preventDefault();
+                    // for code blocks, use a real tab; for everything else, 2 spaces
+                    const indent = state.blocks[i].type === 'code' ? '\t' : '  ';
+                    if (e.shiftKey) {
+                        // shift+tab: remove leading indent on current line if present
+                        const sel = window.getSelection();
+                        if (!sel.rangeCount) return;
+                        const text = el.textContent;
+                        const pos = sel.getRangeAt(0).startOffset;
+                        const lineStart = text.lastIndexOf('\n', pos - 1) + 1;
+                        const line = text.slice(lineStart, pos);
+                        const m = line.match(/^( {1,2}|\t)/);
+                        if (m) {
+                            // crude but works: rebuild text without that indent
+                            const newText = text.slice(0, lineStart) + line.slice(m[0].length) + text.slice(pos);
+                            state.blocks[i].text = newText;
+                            el.innerHTML = textToHtml(newText);
+                            // restore caret roughly
+                            const range = document.createRange();
+                            const node = el.firstChild || el;
+                            const newPos = Math.max(0, pos - m[0].length);
+                            try { range.setStart(node, Math.min(newPos, (node.textContent || '').length)); } catch { }
+                            range.collapse(true);
+                            sel.removeAllRanges();
+                            sel.addRange(range);
+                        }
+                    } else {
+                        document.execCommand('insertText', false, indent);
+                        state.blocks[i].text = htmlToText(el.innerHTML);
+                    }
+                    return;
+                }
                 // slash command at start of empty block
                 if (e.key === '/' && el.textContent === '') {
                     e.preventDefault();
@@ -770,28 +823,82 @@
 
                 const menu = document.createElement('div');
                 menu.className = 'slash-menu';
-                const types = Object.entries(BLOCK_TYPES);
-                let activeIdx = 0;
 
-                const items = types.map(([type, def], idx) => {
-                    const item = document.createElement('div');
-                    item.className = 'slash-item' + (idx === 0 ? ' active' : '');
-                    item.innerHTML = `<span>${def.label}</span><span class="hint">${type}</span>`;
-                    item.dataset.type = type;
-                    item.onclick = () => select(idx);
-                    item.onmouseenter = () => setActive(idx);
-                    menu.appendChild(item);
-                    return item;
-                });
+                // header showing the current filter query, hidden when empty
+                const queryHeader = document.createElement('div');
+                queryHeader.className = 'slash-query';
+                queryHeader.style.cssText = 'padding:0.4rem 0.6rem; font-size:0.8rem; color:var(--muted); border-bottom:1px solid var(--border); display:none;';
+                menu.appendChild(queryHeader);
+
+                const list = document.createElement('div');
+                list.className = 'slash-list';
+                menu.appendChild(list);
+
+                const allTypes = Object.entries(BLOCK_TYPES);
+                let query = '';
+                let activeIdx = 0;
+                let filtered = allTypes;
+                let items = [];
+
+                function rebuildList() {
+                    list.innerHTML = '';
+                    const q = query.toLowerCase();
+                    filtered = q
+                        ? allTypes.filter(([type, def]) =>
+                            type.toLowerCase().includes(q) || def.label.toLowerCase().includes(q))
+                        : allTypes;
+
+                    if (filtered.length === 0) {
+                        const empty = document.createElement('div');
+                        empty.className = 'slash-item';
+                        empty.style.color = 'var(--muted)';
+                        empty.textContent = 'no matches';
+                        list.appendChild(empty);
+                        items = [];
+                        return;
+                    }
+
+                    activeIdx = Math.min(activeIdx, filtered.length - 1);
+                    items = filtered.map(([type, def], idx) => {
+                        const item = document.createElement('div');
+                        item.className = 'slash-item' + (idx === activeIdx ? ' active' : '');
+                        item.innerHTML = `<span>${highlight(def.label, q)}</span><span class="hint">${highlight(type, q)}</span>`;
+                        item.dataset.type = type;
+                        item.onclick = () => select(idx);
+                        item.onmouseenter = () => setActive(idx);
+                        list.appendChild(item);
+                        return item;
+                    });
+                }
+
+                function highlight(text, q) {
+                    if (!q) return text;
+                    const i = text.toLowerCase().indexOf(q);
+                    if (i < 0) return text;
+                    return text.slice(0, i) +
+                        `<b style="color:var(--text);">${text.slice(i, i + q.length)}</b>` +
+                        text.slice(i + q.length);
+                }
 
                 function setActive(idx) {
-                    items[activeIdx].classList.remove('active');
+                    if (!items.length) return;
+                    items[activeIdx]?.classList.remove('active');
                     activeIdx = ((idx % items.length) + items.length) % items.length;
                     items[activeIdx].classList.add('active');
                     items[activeIdx].scrollIntoView({ block: 'nearest' });
                 }
 
+                function updateQueryHeader() {
+                    if (query) {
+                        queryHeader.style.display = 'block';
+                        queryHeader.textContent = '/' + query;
+                    } else {
+                        queryHeader.style.display = 'none';
+                    }
+                }
+
                 function select(idx) {
+                    if (!items[idx]) return;
                     const type = items[idx].dataset.type;
                     cleanup();
                     changeBlockType(blockIndex, type);
@@ -804,30 +911,77 @@
                     document.removeEventListener('keydown', keyHandler);
                 }
 
-                // position below the block
+                rebuildList();
+
+                // position the menu to the left of the block, with its bottom aligned to the block's bottom.
                 const rect = blockEl.getBoundingClientRect();
-                menu.style.left = (rect.left + window.scrollX + 16) + 'px';
-                menu.style.top = (rect.bottom + window.scrollY + 4) + 'px';
                 document.body.appendChild(menu);
                 slashMenuOpen = true;
+                const menuRect = menu.getBoundingClientRect();
+                let left = rect.left + window.scrollX - menuRect.width - 8;
+                if (left < 8) left = 8;
+                const desiredTop = rect.bottom + window.scrollY - menuRect.height;
+                menu.style.left = left + 'px';
+                menu.style.top = Math.max(window.scrollY + 8, desiredTop) + 'px';
+
+                function reposition() {
+                    // re-anchor after menu height changes (e.g. fewer items after filtering)
+                    const r = blockEl.getBoundingClientRect();
+                    const mr = menu.getBoundingClientRect();
+                    const desired = r.bottom + window.scrollY - mr.height;
+                    menu.style.top = Math.max(window.scrollY + 8, desired) + 'px';
+                }
 
                 const off = (ev) => {
                     if (!menu.contains(ev.target)) cleanup();
                 };
+
                 const keyHandler = (ev) => {
                     if (ev.key === 'Escape') {
                         ev.preventDefault();
                         cleanup();
                         focusBlock(state.blocks[blockIndex].id);
-                    } else if (ev.key === 'ArrowDown') {
+                        return;
+                    }
+                    if (ev.key === 'ArrowDown') {
                         ev.preventDefault();
                         setActive(activeIdx + 1);
-                    } else if (ev.key === 'ArrowUp') {
+                        return;
+                    }
+                    if (ev.key === 'ArrowUp') {
                         ev.preventDefault();
                         setActive(activeIdx - 1);
-                    } else if (ev.key === 'Enter') {
+                        return;
+                    }
+                    if (ev.key === 'Enter') {
                         ev.preventDefault();
                         select(activeIdx);
+                        return;
+                    }
+                    // backspace: remove last char of query, or close menu if query is empty
+                    if (ev.key === 'Backspace') {
+                        ev.preventDefault();
+                        if (query.length === 0) {
+                            cleanup();
+                            focusBlock(state.blocks[blockIndex].id);
+                        } else {
+                            query = query.slice(0, -1);
+                            activeIdx = 0;
+                            updateQueryHeader();
+                            rebuildList();
+                            reposition();
+                        }
+                        return;
+                    }
+                    // single printable character (letters, digits, etc.) → add to query
+                    if (ev.key.length === 1 && !ev.ctrlKey && !ev.metaKey && !ev.altKey) {
+                        ev.preventDefault();
+                        query += ev.key;
+                        activeIdx = 0;
+                        updateQueryHeader();
+                        rebuildList();
+                        reposition();
+                        return;
                     }
                 };
 
@@ -889,7 +1043,17 @@
 
             function buildFrontMatter() {
                 const title = document.getElementById('title').value || 'untitled';
-                const date = document.getElementById('date').value || new Date().toISOString().slice(0, 10);
+                const raw = document.getElementById('date').value;
+                // datetime-local gives "YYYY-MM-DDTHH:MM" or "YYYY-MM-DDTHH:MM:SS" — convert to Jekyll's "YYYY-MM-DD HH:MM:SS"
+                let date;
+                if (raw) {
+                    const [d, t = '00:00'] = raw.split('T');
+                    const time = t.length === 5 ? t + ':00' : t;
+                    date = `${d} ${time}`;
+                } else {
+                    const now = new Date();
+                    date = now.toISOString().slice(0, 10) + ' ' + now.toTimeString().slice(0, 8);
+                }
                 const tags = document.getElementById('tags').value.trim();
                 const lines = ['---', 'layout: post', `title: "${title.replace(/"/g, '\\"')}"`, `date: ${date}`];
                 if (tags) {
@@ -906,7 +1070,9 @@
 
             function buildFilename() {
                 const title = document.getElementById('title').value || 'untitled';
-                const date = document.getElementById('date').value || new Date().toISOString().slice(0, 10);
+                const raw = document.getElementById('date').value;
+                // only the date part for the filename (jekyll convention)
+                const date = raw ? raw.split('T')[0] : new Date().toISOString().slice(0, 10);
                 const slug = title.toLowerCase().trim()
                     .replace(/[^\w\s-]/g, '')
                     .replace(/\s+/g, '-')
@@ -1015,7 +1181,13 @@
             })();
 
             // ---------- init ----------
-            document.getElementById('date').value = new Date().toISOString().slice(0, 10);
+            // pre-fill datetime with current local time in YYYY-MM-DDTHH:MM:SS format
+            (function () {
+                const now = new Date();
+                const pad = n => String(n).padStart(2, '0');
+                const local = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+                document.getElementById('date').value = local;
+            })();
             render();
             // focus first block
             setTimeout(() => focusBlock(state.blocks[0].id), 50);
