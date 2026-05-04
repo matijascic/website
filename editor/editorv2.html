@@ -265,6 +265,17 @@
             font-size: 0.9rem;
         }
 
+        /* separator block */
+        .block.hr {
+            padding: 0.75rem 5rem 0.75rem 2.25rem;
+        }
+
+        .block.hr hr {
+            border: none;
+            border-top: 1px solid var(--border-strong);
+            margin: 0;
+        }
+
         /* hover controls */
         .block-controls {
             position: absolute;
@@ -440,6 +451,7 @@
                 quote: { label: 'quote', placeholder: 'quote' },
                 code: { label: 'code', placeholder: 'paste code here' },
                 image: { label: 'image', placeholder: '' },
+                hr: { label: 'separator', placeholder: '' },
             };
 
             // ---------- render ----------
@@ -460,10 +472,14 @@
                     insertBtn.onclick = () => insertBlockAfter(i);
                     wrap.appendChild(insertBtn);
 
-                    // the block content — image is special, everything else is contenteditable
+                    // the block content — image and hr are special, everything else is contenteditable
                     let el;
                     if (block.type === 'image') {
                         el = renderImageBlock(block, i);
+                    } else if (block.type === 'hr') {
+                        el = document.createElement('div');
+                        el.className = 'block hr';
+                        el.innerHTML = '<hr>';
                     } else {
                         el = document.createElement('div');
                         el.className = `block ${block.type !== 'paragraph' ? block.type : ''}`;
@@ -539,9 +555,20 @@
                 } else {
                     const prompt = document.createElement('div');
                     prompt.className = 'image-prompt';
-                    prompt.textContent = 'click to upload an image';
+                    prompt.innerHTML = `
+        <div style="margin-bottom:0.5rem;">add an image</div>
+        <button class="btn image-btn" data-act="file">upload file</button>
+        <button class="btn image-btn" data-act="url" style="margin-left:0.4rem;">from url</button>
+      `;
+                    prompt.querySelector('[data-act="file"]').onclick = (e) => {
+                        e.stopPropagation();
+                        uploadImageForBlock(block);
+                    };
+                    prompt.querySelector('[data-act="url"]').onclick = (e) => {
+                        e.stopPropagation();
+                        addImageFromUrl(block);
+                    };
                     inner.appendChild(prompt);
-                    inner.onclick = () => uploadImageForBlock(block);
                 }
 
                 wrap.appendChild(inner);
@@ -588,6 +615,15 @@
                 input.click();
             }
 
+            function addImageFromUrl(block) {
+                const url = prompt('image url:', 'https://');
+                if (!url || url === 'https://') return;
+                const alt = prompt('alt text (optional):', '') || '';
+                block.src = url;
+                block.alt = alt;
+                render();
+            }
+
             // ---------- block operations ----------
             function insertBlockAfter(i, type = 'paragraph') {
                 const newBlock = { id: nid(), type, text: '' };
@@ -621,6 +657,14 @@
 
             function changeBlockType(i, newType) {
                 state.blocks[i].type = newType;
+                // hr can't be edited — insert a paragraph after it and focus that
+                if (newType === 'hr') {
+                    const newBlock = { id: nid(), type: 'paragraph', text: '' };
+                    state.blocks.splice(i + 1, 0, newBlock);
+                    render();
+                    focusBlock(newBlock.id);
+                    return;
+                }
                 const id = state.blocks[i].id;
                 render();
                 focusBlock(id, 'end');
@@ -630,6 +674,14 @@
                 const wrap = blocksEl.querySelector(`[data-id="${id}"] .block`);
                 if (!wrap) return;
                 wrap.focus();
+                // keep the cursor visible — if the block is near top or bottom of viewport, scroll
+                const rect = wrap.getBoundingClientRect();
+                const viewportH = window.innerHeight;
+                if (rect.bottom > viewportH * 0.7) {
+                    window.scrollBy({ top: rect.bottom - viewportH * 0.5, behavior: 'smooth' });
+                } else if (rect.top < viewportH * 0.1) {
+                    window.scrollBy({ top: rect.top - viewportH * 0.3, behavior: 'smooth' });
+                }
                 if (position === 'end') {
                     const range = document.createRange();
                     range.selectNodeContents(wrap);
@@ -811,6 +863,10 @@
                             break;
                         case 'image':
                             out.push(`![${block.alt || ''}](${block.src || ''})`);
+                            i++;
+                            break;
+                        case 'hr':
+                            out.push('---');
                             i++;
                             break;
                         case 'list':
