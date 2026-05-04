@@ -595,42 +595,37 @@
                     const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '-').toLowerCase();
                     const path = `/assets/images/${safeName}`;
 
-                    if (repoHandle && (await ensurePerm(repoHandle))) {
-                        try {
-                            const assets = await repoHandle.getDirectoryHandle('assets', { create: true });
-                            const images = await assets.getDirectoryHandle('images', { create: true });
-                            const fh = await images.getFileHandle(safeName, { create: true });
-                            const w = await fh.createWritable();
-                            await w.write(file);
-                            await w.close();
-                            block.src = path;
-                            block.alt = file.name.replace(/\.[^.]+$/, '');
-                            const idx = state.blocks.indexOf(block);
-                            render();
-                            showToast(`saved ${path}`);
-                            // insert new paragraph block after image
-                            if (idx !== -1) {
-                                insertBlockAfter(idx);
+                    // always use data URL for preview so it renders locally
+                    const reader = new FileReader();
+                    reader.onload = async (ev) => {
+                        block.src = ev.target.result;
+                        block.alt = file.name.replace(/\.[^.]+$/, '');
+                        const idx = state.blocks.indexOf(block);
+                        render();
+
+                        // also save to repo if connected
+                        if (repoHandle && (await ensurePerm(repoHandle))) {
+                            try {
+                                const assets = await repoHandle.getDirectoryHandle('assets', { create: true });
+                                const images = await assets.getDirectoryHandle('images', { create: true });
+                                const fh = await images.getFileHandle(safeName, { create: true });
+                                const w = await fh.createWritable();
+                                await w.write(file);
+                                await w.close();
+                                showToast(`saved ${path}`);
+                            } catch (err) {
+                                showToast('image save failed: ' + err.message, true);
                             }
-                        } catch (err) {
-                            showToast('image save failed: ' + err.message, true);
-                        }
-                    } else {
-                        // no repo — use a data URL so the preview still works locally
-                        const reader = new FileReader();
-                        reader.onload = (ev) => {
-                            block.src = ev.target.result;
-                            block.alt = file.name.replace(/\.[^.]+$/, '');
-                            const idx = state.blocks.indexOf(block);
-                            render();
+                        } else {
                             showToast('connect repo to save image to assets/images/', true);
-                            // insert new paragraph block after image
-                            if (idx !== -1) {
-                                insertBlockAfter(idx);
-                            }
-                        };
-                        reader.readAsDataURL(file);
-                    }
+                        }
+
+                        // insert new paragraph block after image
+                        if (idx !== -1) {
+                            insertBlockAfter(idx);
+                        }
+                    };
+                    reader.readAsDataURL(file);
                 };
                 input.click();
             }
