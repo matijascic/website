@@ -95,6 +95,10 @@
             cursor: not-allowed;
         }
 
+        .btn.hidden {
+            display: none;
+        }
+
         .btn-primary {
             background: var(--accent);
             color: white;
@@ -463,6 +467,7 @@
     <div class="container">
         <div class="topbar" id="topbar">
             <span class="repo-status" id="repo-status"><span class="dot"></span>no repo connected</span>
+            <button class="btn hidden" id="reconnect-repo">reconnect</button>
             <button class="btn" id="connect-repo">connect</button>
         </div>
 
@@ -1174,6 +1179,7 @@
             const topbar = document.getElementById('topbar');
             const repoStatus = document.getElementById('repo-status');
             const connectBtn = document.getElementById('connect-repo');
+            const reconnectBtn = document.getElementById('reconnect-repo');
             const saveBtn = document.getElementById('save');
             const saveDraftBtn = document.getElementById('save-draft');
             const actionsEl = document.getElementById('actions');
@@ -1217,6 +1223,7 @@
                 topbar.classList.add('connected');
                 repoStatus.innerHTML = `<span class="dot"></span>connected: <b>${handle.name}</b>`;
                 connectBtn.textContent = 'change';
+                reconnectBtn.classList.add('hidden');
                 enableEditor();
                 checkForDraft();
             }
@@ -1317,6 +1324,15 @@
 
             connectBtn.addEventListener('click', pickRepo);
 
+            reconnectBtn.addEventListener('click', async () => {
+                const saved = await dbGet('repo');
+                if (saved && (await ensurePerm(saved))) {
+                    setConnected(saved);
+                } else {
+                    showToast('permission denied or repo not found', true);
+                }
+            });
+
             saveBtn.addEventListener('click', async () => {
                 saveDraft(); // auto-save draft when saving to repo
                 if (!repoHandle) return;
@@ -1349,13 +1365,9 @@
                 if (!supportsFS) return;
                 const saved = await dbGet('repo');
                 if (saved) {
-                    repoStatus.innerHTML = `<span class="dot"></span>last folder: <b>${saved.name}</b> — click to reconnect`;
-                    connectBtn.textContent = 'reconnect';
-                    connectBtn.removeEventListener('click', pickRepo);
-                    connectBtn.addEventListener('click', async () => {
-                        if (await ensurePerm(saved)) setConnected(saved);
-                        else showToast('permission denied', true);
-                    }, { once: true });
+                    repoStatus.innerHTML = `<span class="dot"></span>last folder: <b>${saved.name}</b>`;
+                    connectBtn.textContent = 'change';
+                    reconnectBtn.classList.remove('hidden');
                 }
                 // editor stays disabled until explicitly connected
             })();
