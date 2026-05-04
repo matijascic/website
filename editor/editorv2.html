@@ -395,6 +395,12 @@
             display: flex;
             gap: 0.5rem;
             justify-content: flex-end;
+            transition: opacity 0.2s;
+        }
+
+        .actions.disabled {
+            opacity: 0.4;
+            pointer-events: none;
         }
 
         .toast {
@@ -421,6 +427,35 @@
         .toast.error {
             background: var(--danger);
         }
+
+        .draft-banner {
+            background: #fffbeb;
+            border: 1px solid #fbbf24;
+            border-radius: 8px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1rem;
+            display: none;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .draft-banner.show {
+            display: flex;
+        }
+
+        .draft-banner-text {
+            flex: 1;
+            font-size: 0.9rem;
+        }
+
+        .draft-banner-text strong {
+            color: #92400e;
+        }
+
+        .draft-banner-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
     </style>
 </head>
 
@@ -429,7 +464,16 @@
         <div class="topbar" id="topbar">
             <span class="repo-status" id="repo-status"><span class="dot"></span>no repo connected</span>
             <button class="btn" id="connect-repo">connect</button>
-            <button class="btn btn-primary" id="save" disabled>save to _posts/</button>
+        </div>
+
+        <div class="draft-banner" id="draft-banner">
+            <div class="draft-banner-text">
+                <strong>📝 Draft found!</strong> <span id="draft-time"></span>
+            </div>
+            <div class="draft-banner-actions">
+                <button class="btn" id="load-draft-btn">load draft</button>
+                <button class="btn" id="dismiss-draft-btn">dismiss</button>
+            </div>
         </div>
 
         <div class="frontmatter">
@@ -441,6 +485,11 @@
         </div>
 
         <div class="blocks" id="blocks"></div>
+
+        <div class="actions" id="actions">
+            <button class="btn" id="save-draft">save draft</button>
+            <button class="btn btn-primary" id="save">save to _posts/</button>
+        </div>
     </div>
 
     <div class="toast" id="toast"></div>
@@ -1126,6 +1175,11 @@
             const repoStatus = document.getElementById('repo-status');
             const connectBtn = document.getElementById('connect-repo');
             const saveBtn = document.getElementById('save');
+            const saveDraftBtn = document.getElementById('save-draft');
+            const actionsEl = document.getElementById('actions');
+            const draftBanner = document.getElementById('draft-banner');
+            const loadDraftBtn = document.getElementById('load-draft-btn');
+            const dismissDraftBtn = document.getElementById('dismiss-draft-btn');
 
             function openDB() {
                 return new Promise((res, rej) => {
@@ -1163,8 +1217,8 @@
                 topbar.classList.add('connected');
                 repoStatus.innerHTML = `<span class="dot"></span>connected: <b>${handle.name}</b>`;
                 connectBtn.textContent = 'change';
-                saveBtn.disabled = false;
                 enableEditor();
+                checkForDraft();
             }
 
             async function pickRepo() {
@@ -1181,16 +1235,90 @@
             function enableEditor() {
                 document.querySelector('.frontmatter').classList.remove('disabled');
                 blocksEl.classList.remove('disabled');
+                actionsEl.classList.remove('disabled');
             }
 
             function disableEditor() {
                 document.querySelector('.frontmatter').classList.add('disabled');
                 blocksEl.classList.add('disabled');
+                actionsEl.classList.add('disabled');
             }
+
+            // ---------- draft management ----------
+            function saveDraft() {
+                const draft = {
+                    title: document.getElementById('title').value,
+                    date: document.getElementById('date').value,
+                    tags: document.getElementById('tags').value,
+                    blocks: state.blocks,
+                    savedAt: new Date().toISOString()
+                };
+                localStorage.setItem('blog-draft', JSON.stringify(draft));
+                showToast('draft saved to browser');
+            }
+
+            function loadDraft() {
+                const saved = localStorage.getItem('blog-draft');
+                if (!saved) return false;
+                try {
+                    const draft = JSON.parse(saved);
+                    document.getElementById('title').value = draft.title || '';
+                    document.getElementById('date').value = draft.date || '';
+                    document.getElementById('tags').value = draft.tags || '';
+                    state.blocks = draft.blocks || [{ id: nid(), type: 'paragraph', text: '' }];
+                    render();
+                    showToast('draft loaded');
+                    return true;
+                } catch (err) {
+                    console.error('failed to load draft:', err);
+                    return false;
+                }
+            }
+
+            function checkForDraft() {
+                const saved = localStorage.getItem('blog-draft');
+                if (!saved) return;
+                try {
+                    const draft = JSON.parse(saved);
+                    const savedAt = new Date(draft.savedAt);
+                    const timeAgo = formatTimeAgo(savedAt);
+                    document.getElementById('draft-time').textContent = `Saved ${timeAgo}`;
+                    draftBanner.classList.add('show');
+                } catch (err) {
+                    console.error('failed to check draft:', err);
+                }
+            }
+
+            loadDraftBtn.addEventListener('click', () => {
+                loadDraft();
+                draftBanner.classList.remove('show');
+            });
+
+            dismissDraftBtn.addEventListener('click', () => {
+                if (confirm('are you sure? this will delete the saved draft.')) {
+                    localStorage.removeItem('blog-draft');
+                    draftBanner.classList.remove('show');
+                    showToast('draft dismissed');
+                }
+            });
+
+            function formatTimeAgo(date) {
+                const seconds = Math.floor((new Date() - date) / 1000);
+                if (seconds < 60) return 'just now';
+                const minutes = Math.floor(seconds / 60);
+                if (minutes < 60) return `${minutes} minute${minutes !== 1 ? 's' : ''} ago`;
+                const hours = Math.floor(minutes / 60);
+                if (hours < 24) return `${hours} hour${hours !== 1 ? 's' : ''} ago`;
+                const days = Math.floor(hours / 24);
+                return `${days} day${days !== 1 ? 's' : ''} ago`;
+            }
+
+            saveDraftBtn.addEventListener('click', saveDraft);
 
             connectBtn.addEventListener('click', pickRepo);
 
             saveBtn.addEventListener('click', async () => {
+                saveDraft(); // auto-save draft when saving to repo
                 if (!repoHandle) return;
                 if (!(await ensurePerm(repoHandle))) { showToast('permission denied', true); return; }
                 try {
@@ -1200,6 +1328,7 @@
                     const w = await fh.createWritable();
                     await w.write(buildFullMarkdown());
                     await w.close();
+                    localStorage.removeItem('blog-draft'); // clear draft after successful save
                     showToast(`saved _posts/${name}`);
                 } catch (err) {
                     showToast('save failed: ' + err.message, true);
