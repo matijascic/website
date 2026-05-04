@@ -113,6 +113,12 @@
             margin-bottom: 1rem;
             display: grid;
             gap: 0.5rem;
+            transition: opacity 0.2s;
+        }
+
+        .frontmatter.disabled {
+            opacity: 0.4;
+            pointer-events: none;
         }
 
         .frontmatter input {
@@ -148,6 +154,12 @@
         /* blocks */
         .blocks {
             padding: 0.5rem 0;
+            transition: opacity 0.2s;
+        }
+
+        .blocks.disabled {
+            opacity: 0.4;
+            pointer-events: none;
         }
 
         .block-wrap {
@@ -1152,6 +1164,7 @@
                 repoStatus.innerHTML = `<span class="dot"></span>connected: <b>${handle.name}</b>`;
                 connectBtn.textContent = 'change';
                 saveBtn.disabled = false;
+                enableEditor();
             }
 
             async function pickRepo() {
@@ -1163,6 +1176,16 @@
                 } catch (err) {
                     if (err.name !== 'AbortError') showToast('failed: ' + err.message, true);
                 }
+            }
+
+            function enableEditor() {
+                document.querySelector('.frontmatter').classList.remove('disabled');
+                blocksEl.classList.remove('disabled');
+            }
+
+            function disableEditor() {
+                document.querySelector('.frontmatter').classList.add('disabled');
+                blocksEl.classList.add('disabled');
             }
 
             connectBtn.addEventListener('click', pickRepo);
@@ -1205,9 +1228,13 @@
                         else showToast('permission denied', true);
                     }, { once: true });
                 }
+                // editor stays disabled until explicitly connected
             })();
 
             // ---------- init ----------
+            // start with editor disabled until repo is connected
+            disableEditor();
+
             // pre-fill datetime with current local time in YYYY-MM-DDTHH:MM:SS format
             (function () {
                 const now = new Date();
@@ -1216,8 +1243,6 @@
                 document.getElementById('date').value = local;
             })();
             render();
-            // focus first block
-            setTimeout(() => focusBlock(state.blocks[0].id), 50);
         })();
     </script>
 </body>
