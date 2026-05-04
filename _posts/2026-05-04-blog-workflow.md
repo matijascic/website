@@ -1,3 +1,9 @@
+---
+layout: post
+title: "editor-test"
+date: 2026-05-04 23:18:00
+---
+
 # Blog workflow
 
 maybe writing plain md in vscode is the better approach..
