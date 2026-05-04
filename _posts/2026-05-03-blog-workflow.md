@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "editor-test"
+title: "blog-workflow"
 date: 2026-05-03 23:18:00
 ---
 

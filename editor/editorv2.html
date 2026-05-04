@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>block editor</title>
+    <style>
+        :root {
+            --bg: #fafaf7;
+            --surface: #ffffff;
+            --border: #e5e3dc;
+            --border-strong: #c9c6bc;
+            --text: #1a1a1a;
+            --muted: #6b6b6b;
+            --accent: #2563eb;
+            --success: #15803d;
+            --danger: #b91c1c;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 760px;
+            margin: 0 auto;
+            padding: 1.5rem;
+        }
+
+        .topbar {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            padding: 0.6rem 0.8rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+
+        .topbar.connected {
+            background: #f0fdf4;
+            border-color: #bbf7d0;
+        }
+
+        .repo-status {
+            flex: 1;
+            font-size: 0.85rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .dot {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--border-strong);
+            margin-right: 0.4rem;
+            vertical-align: middle;
+        }
+
+        .topbar.connected .dot {
+            background: var(--success);
+        }
+
+        .btn {
+            padding: 0.4rem 0.85rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text);
+            font-family: inherit;
+            font-weight: 500;
+        }
+
+        .btn:hover {
+            background: var(--bg);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+
+        .btn-primary:disabled:hover {
+            background: var(--accent);
+        }
+
+        .frontmatter {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1rem;
+            display: grid;
+            gap: 0.5rem;
+        }
+
+        .frontmatter input {
+            width: 100%;
+            border: none;
+            padding: 0.25rem 0;
+            font-family: inherit;
+            color: var(--text);
+            background: transparent;
+        }
+
+        .frontmatter input:focus {
+            outline: none;
+        }
+
+        .frontmatter .title-input {
+            font-size: 1.6rem;
+            font-weight: 600;
+        }
+
+        .frontmatter .meta-row {
+            display: flex;
+            gap: 1rem;
+            font-size: 0.85rem;
+            color: var(--muted);
+        }
+
+        .frontmatter .meta-row input {
+            font-size: 0.85rem;
+            color: var(--muted);
+        }
+
+        /* blocks */
+        .blocks {
+            padding: 0.5rem 0;
+        }
+
+        .block-wrap {
+            position: relative;
+            margin: 0;
+        }
+
+        .block {
+            padding: 0.35rem 0;
+            outline: none;
+            min-height: 1.6em;
+            border-radius: 4px;
+            padding-left: 2.25rem;
+            padding-right: 5rem;
+            position: relative;
+        }
+
+        .block:focus {
+            background: rgba(37, 99, 235, 0.04);
+        }
+
+        .block:empty:not(:focus)::before {
+            content: attr(data-placeholder);
+            color: var(--border-strong);
+            pointer-events: none;
+        }
+
+        .block.h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-top: 0.75rem;
+        }
+
+        .block.h3 {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-top: 0.5rem;
+        }
+
+        .block.code {
+            font-family: ui-monospace, "SF Mono", Menlo, monospace;
+            font-size: 0.9rem;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            padding: 0.75rem 5rem 0.75rem 2.25rem;
+            white-space: pre-wrap;
+        }
+
+        .block.quote {
+            border-left: 3px solid var(--border-strong);
+            color: var(--muted);
+            padding-left: 0.85rem;
+            margin-left: 1.5rem;
+        }
+
+        .block.list {
+            padding-left: 3rem;
+            position: relative;
+        }
+
+        .block.list::before {
+            content: "•";
+            position: absolute;
+            left: 2.5rem;
+            color: var(--muted);
+        }
+
+        /* image block */
+        .block.image {
+            padding: 0.5rem 5rem 0.5rem 2.25rem;
+        }
+
+        .image-wrap {
+            border: 1px dashed var(--border-strong);
+            border-radius: 6px;
+            padding: 1.5rem;
+            text-align: center;
+            background: var(--bg);
+            cursor: pointer;
+        }
+
+        .image-wrap:hover {
+            border-color: var(--accent);
+        }
+
+        .image-wrap.has-image {
+            border: 1px solid var(--border);
+            padding: 0;
+            background: transparent;
+            cursor: default;
+        }
+
+        .image-wrap img {
+            max-width: 100%;
+            border-radius: 6px;
+            display: block;
+        }
+
+        .image-caption {
+            margin-top: 0.4rem;
+            font-size: 0.85rem;
+            color: var(--muted);
+            text-align: center;
+            outline: none;
+        }
+
+        .image-caption:empty:before {
+            content: "alt text (optional)";
+            color: var(--border-strong);
+        }
+
+        .image-prompt {
+            color: var(--muted);
+            font-size: 0.9rem;
+        }
+
+        /* hover controls */
+        .block-controls {
+            position: absolute;
+            top: 0.45rem;
+            right: 0.5rem;
+            display: flex;
+            gap: 0.15rem;
+            opacity: 0;
+            transition: opacity 0.1s;
+        }
+
+        .block-wrap:hover .block-controls,
+        .block-wrap:focus-within .block-controls {
+            opacity: 1;
+        }
+
+        .ctrl-btn {
+            width: 22px;
+            height: 22px;
+            border: none;
+            background: transparent;
+            color: var(--muted);
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            line-height: 1;
+            padding: 0;
+        }
+
+        .ctrl-btn:hover {
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        .ctrl-btn.danger:hover {
+            color: var(--danger);
+        }
+
+        /* + button between blocks */
+        .insert-btn {
+            position: absolute;
+            left: 0.25rem;
+            top: 0.55rem;
+            width: 22px;
+            height: 22px;
+            border: none;
+            background: transparent;
+            color: var(--border-strong);
+            cursor: pointer;
+            font-size: 1.1rem;
+            line-height: 1;
+            border-radius: 4px;
+            opacity: 0;
+            transition: opacity 0.1s;
+        }
+
+        .block-wrap:hover .insert-btn {
+            opacity: 1;
+        }
+
+        .insert-btn:hover {
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        /* slash menu */
+        .slash-menu {
+            position: absolute;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            padding: 0.25rem;
+            z-index: 10;
+            min-width: 200px;
+        }
+
+        .slash-item {
+            padding: 0.4rem 0.6rem;
+            font-size: 0.85rem;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .slash-item:hover,
+        .slash-item.active {
+            background: var(--bg);
+        }
+
+        .slash-item .hint {
+            font-size: 0.75rem;
+            color: var(--muted);
+        }
+
+        .actions {
+            margin-top: 1.5rem;
+            display: flex;
+            gap: 0.5rem;
+            justify-content: flex-end;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            background: var(--text);
+            color: white;
+            padding: 0.65rem 1rem;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.2s, transform 0.2s;
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .toast.error {
+            background: var(--danger);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="topbar" id="topbar">
+            <span class="repo-status" id="repo-status"><span class="dot"></span>no repo connected</span>
+            <button class="btn" id="connect-repo">connect</button>
+            <button class="btn btn-primary" id="save" disabled>save to _posts/</button>
+        </div>
+
+        <div class="frontmatter">
+            <input type="text" class="title-input" id="title" placeholder="untitled" />
+            <div class="meta-row">
+                <input type="date" id="date" />
+                <input type="text" id="tags" placeholder="tags (comma-separated)" style="flex:1;" />
+            </div>
+        </div>
+
+        <div class="blocks" id="blocks"></div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        (function () {
+            // ---------- state ----------
+            // each block: { id, type, text }
+            // types so far: 'paragraph', 'h2', 'h3'
+            const state = {
+                blocks: [
+                    { id: nid(), type: 'paragraph', text: '' }
+                ]
+            };
+
+            function nid() { return Math.random().toString(36).slice(2, 9); }
+
+            // ---------- block types registry ----------
+            // adding a new block type later means: add to this object + handle in serializer
+            const BLOCK_TYPES = {
+                paragraph: { label: 'text', placeholder: "type '/' for commands, ctrl+enter for new block" },
+                h2: { label: 'heading', placeholder: 'section heading' },
+                h3: { label: 'subheading', placeholder: 'subsection heading' },
+                list: { label: 'bullet', placeholder: 'list item' },
+                quote: { label: 'quote', placeholder: 'quote' },
+                code: { label: 'code', placeholder: 'paste code here' },
+                image: { label: 'image', placeholder: '' },
+            };
+
+            // ---------- render ----------
+            const blocksEl = document.getElementById('blocks');
+
+            function render() {
+                blocksEl.innerHTML = '';
+                state.blocks.forEach((block, i) => {
+                    const wrap = document.createElement('div');
+                    wrap.className = 'block-wrap';
+                    wrap.dataset.id = block.id;
+
+                    // + button
+                    const insertBtn = document.createElement('button');
+                    insertBtn.className = 'insert-btn';
+                    insertBtn.textContent = '+';
+                    insertBtn.title = 'insert block below';
+                    insertBtn.onclick = () => insertBlockAfter(i);
+                    wrap.appendChild(insertBtn);
+
+                    // the block content — image is special, everything else is contenteditable
+                    let el;
+                    if (block.type === 'image') {
+                        el = renderImageBlock(block, i);
+                    } else {
+                        el = document.createElement('div');
+                        el.className = `block ${block.type !== 'paragraph' ? block.type : ''}`;
+                        el.contentEditable = 'true';
+                        el.dataset.placeholder = BLOCK_TYPES[block.type].placeholder;
+                        // we use innerHTML because text may contain <br> for soft line breaks
+                        el.innerHTML = textToHtml(block.text);
+                        el.addEventListener('input', () => {
+                            block.text = htmlToText(el.innerHTML);
+                        });
+                        el.addEventListener('keydown', (e) => handleBlockKeydown(e, i, el));
+                    }
+                    wrap.appendChild(el);
+
+                    // controls
+                    const controls = document.createElement('div');
+                    controls.className = 'block-controls';
+                    controls.innerHTML = `
+        <button class="ctrl-btn" data-act="up" title="move up">↑</button>
+        <button class="ctrl-btn" data-act="down" title="move down">↓</button>
+        <button class="ctrl-btn danger" data-act="del" title="delete">×</button>
+      `;
+                    controls.querySelector('[data-act="up"]').onclick = () => moveBlock(i, -1);
+                    controls.querySelector('[data-act="down"]').onclick = () => moveBlock(i, 1);
+                    controls.querySelector('[data-act="del"]').onclick = () => deleteBlock(i);
+                    wrap.appendChild(controls);
+
+                    blocksEl.appendChild(wrap);
+                });
+            }
+
+            // convert plain text with \n to html with <br>, escaping html chars
+            function textToHtml(text) {
+                return (text || '')
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/\n/g, '<br>');
+            }
+            // convert contenteditable html back to plain text with \n
+            function htmlToText(html) {
+                return html
+                    .replace(/<div><br><\/div>/gi, '\n')
+                    .replace(/<div>/gi, '\n')
+                    .replace(/<\/div>/gi, '')
+                    .replace(/<br\s*\/?>/gi, '\n')
+                    .replace(/&nbsp;/g, ' ')
+                    .replace(/&lt;/g, '<')
+                    .replace(/&gt;/g, '>')
+                    .replace(/&amp;/g, '&');
+            }
+
+            // ---------- image block rendering ----------
+            function renderImageBlock(block, i) {
+                const wrap = document.createElement('div');
+                wrap.className = 'block image';
+
+                const inner = document.createElement('div');
+                inner.className = 'image-wrap' + (block.src ? ' has-image' : '');
+
+                if (block.src) {
+                    const img = document.createElement('img');
+                    img.src = block.src;
+                    img.alt = block.alt || '';
+                    inner.appendChild(img);
+
+                    const caption = document.createElement('div');
+                    caption.className = 'image-caption';
+                    caption.contentEditable = 'true';
+                    caption.textContent = block.alt || '';
+                    caption.addEventListener('input', () => { block.alt = caption.textContent; });
+                    inner.appendChild(caption);
+                } else {
+                    const prompt = document.createElement('div');
+                    prompt.className = 'image-prompt';
+                    prompt.textContent = 'click to upload an image';
+                    inner.appendChild(prompt);
+                    inner.onclick = () => uploadImageForBlock(block);
+                }
+
+                wrap.appendChild(inner);
+                return wrap;
+            }
+
+            async function uploadImageForBlock(block) {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = 'image/*';
+                input.onchange = async (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    const safeName = file.name.replace(/[^a-zA-Z0-9.\-_]/g, '-').toLowerCase();
+                    const path = `/assets/images/${safeName}`;
+
+                    if (repoHandle && (await ensurePerm(repoHandle))) {
+                        try {
+                            const assets = await repoHandle.getDirectoryHandle('assets', { create: true });
+                            const images = await assets.getDirectoryHandle('images', { create: true });
+                            const fh = await images.getFileHandle(safeName, { create: true });
+                            const w = await fh.createWritable();
+                            await w.write(file);
+                            await w.close();
+                            block.src = path;
+                            block.alt = file.name.replace(/\.[^.]+$/, '');
+                            render();
+                            showToast(`saved ${path}`);
+                        } catch (err) {
+                            showToast('image save failed: ' + err.message, true);
+                        }
+                    } else {
+                        // no repo — use a data URL so the preview still works locally
+                        const reader = new FileReader();
+                        reader.onload = (ev) => {
+                            block.src = ev.target.result;
+                            block.alt = file.name.replace(/\.[^.]+$/, '');
+                            render();
+                            showToast('connect repo to save image to assets/images/', true);
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                };
+                input.click();
+            }
+
+            // ---------- block operations ----------
+            function insertBlockAfter(i, type = 'paragraph') {
+                const newBlock = { id: nid(), type, text: '' };
+                state.blocks.splice(i + 1, 0, newBlock);
+                render();
+                focusBlock(newBlock.id);
+            }
+
+            function deleteBlock(i) {
+                if (state.blocks.length === 1) {
+                    // don't allow zero blocks; just clear it
+                    state.blocks[0].text = '';
+                    state.blocks[0].type = 'paragraph';
+                    render();
+                    focusBlock(state.blocks[0].id);
+                    return;
+                }
+                const focusTarget = state.blocks[Math.max(0, i - 1)].id;
+                state.blocks.splice(i, 1);
+                render();
+                focusBlock(focusTarget, 'end');
+            }
+
+            function moveBlock(i, dir) {
+                const j = i + dir;
+                if (j < 0 || j >= state.blocks.length) return;
+                [state.blocks[i], state.blocks[j]] = [state.blocks[j], state.blocks[i]];
+                render();
+                focusBlock(state.blocks[j].id, 'end');
+            }
+
+            function changeBlockType(i, newType) {
+                state.blocks[i].type = newType;
+                const id = state.blocks[i].id;
+                render();
+                focusBlock(id, 'end');
+            }
+
+            function focusBlock(id, position = 'end') {
+                const wrap = blocksEl.querySelector(`[data-id="${id}"] .block`);
+                if (!wrap) return;
+                wrap.focus();
+                if (position === 'end') {
+                    const range = document.createRange();
+                    range.selectNodeContents(wrap);
+                    range.collapse(false);
+                    const sel = window.getSelection();
+                    sel.removeAllRanges();
+                    sel.addRange(range);
+                }
+            }
+
+            // ---------- keyboard handling ----------
+            let slashMenuOpen = false;
+
+            function handleBlockKeydown(e, i, el) {
+                // when the slash menu is open, let it handle all keys
+                if (slashMenuOpen) {
+                    // block all keys so the menu's handler is the only one that responds
+                    if (['Enter', 'ArrowUp', 'ArrowDown', 'Escape', 'Tab'].includes(e.key)) {
+                        e.preventDefault();
+                    }
+                    return;
+                }
+                // ctrl+enter creates a new paragraph block below
+                if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                    e.preventDefault();
+                    insertBlockAfter(i);
+                    return;
+                }
+                // plain enter on heading blocks creates a new paragraph block (since headings shouldn't have line breaks)
+                if (e.key === 'Enter' && !e.shiftKey && (state.blocks[i].type === 'h2' || state.blocks[i].type === 'h3')) {
+                    e.preventDefault();
+                    insertBlockAfter(i);
+                    return;
+                }
+                // plain enter elsewhere = soft line break (browser default for contenteditable inserts <br>)
+                // we let it through but use execCommand to keep it consistent across browsers
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    document.execCommand('insertLineBreak');
+                    state.blocks[i].text = htmlToText(el.innerHTML);
+                    return;
+                }
+                // backspace on empty block deletes it
+                if (e.key === 'Backspace' && el.textContent === '') {
+                    e.preventDefault();
+                    deleteBlock(i);
+                    return;
+                }
+                // arrow up/down navigate between blocks (when at edge)
+                if (e.key === 'ArrowUp' && i > 0 && isAtFirstLine(el)) {
+                    e.preventDefault();
+                    focusBlock(state.blocks[i - 1].id, 'end');
+                    return;
+                }
+                if (e.key === 'ArrowDown' && i < state.blocks.length - 1 && isAtLastLine(el)) {
+                    e.preventDefault();
+                    focusBlock(state.blocks[i + 1].id, 'end');
+                    return;
+                }
+                // slash command at start of empty block
+                if (e.key === '/' && el.textContent === '') {
+                    e.preventDefault();
+                    showSlashMenu(i, el);
+                    return;
+                }
+            }
+
+            function isAtFirstLine(el) {
+                // crude but works for short blocks
+                const sel = window.getSelection();
+                if (!sel.rangeCount) return true;
+                const range = sel.getRangeAt(0);
+                return range.startOffset === 0 || !el.textContent.slice(0, range.startOffset).includes('\n');
+            }
+            function isAtLastLine(el) {
+                const sel = window.getSelection();
+                if (!sel.rangeCount) return true;
+                const range = sel.getRangeAt(0);
+                return range.startOffset === el.textContent.length || !el.textContent.slice(range.startOffset).includes('\n');
+            }
+
+            // ---------- slash menu ----------
+            function showSlashMenu(blockIndex, blockEl) {
+                const existing = document.querySelector('.slash-menu');
+                if (existing) existing.remove();
+
+                const menu = document.createElement('div');
+                menu.className = 'slash-menu';
+                const types = Object.entries(BLOCK_TYPES);
+                let activeIdx = 0;
+
+                const items = types.map(([type, def], idx) => {
+                    const item = document.createElement('div');
+                    item.className = 'slash-item' + (idx === 0 ? ' active' : '');
+                    item.innerHTML = `<span>${def.label}</span><span class="hint">${type}</span>`;
+                    item.dataset.type = type;
+                    item.onclick = () => select(idx);
+                    item.onmouseenter = () => setActive(idx);
+                    menu.appendChild(item);
+                    return item;
+                });
+
+                function setActive(idx) {
+                    items[activeIdx].classList.remove('active');
+                    activeIdx = ((idx % items.length) + items.length) % items.length;
+                    items[activeIdx].classList.add('active');
+                    items[activeIdx].scrollIntoView({ block: 'nearest' });
+                }
+
+                function select(idx) {
+                    const type = items[idx].dataset.type;
+                    cleanup();
+                    changeBlockType(blockIndex, type);
+                }
+
+                function cleanup() {
+                    slashMenuOpen = false;
+                    menu.remove();
+                    document.removeEventListener('click', off);
+                    document.removeEventListener('keydown', keyHandler);
+                }
+
+                // position below the block
+                const rect = blockEl.getBoundingClientRect();
+                menu.style.left = (rect.left + window.scrollX + 16) + 'px';
+                menu.style.top = (rect.bottom + window.scrollY + 4) + 'px';
+                document.body.appendChild(menu);
+                slashMenuOpen = true;
+
+                const off = (ev) => {
+                    if (!menu.contains(ev.target)) cleanup();
+                };
+                const keyHandler = (ev) => {
+                    if (ev.key === 'Escape') {
+                        ev.preventDefault();
+                        cleanup();
+                        focusBlock(state.blocks[blockIndex].id);
+                    } else if (ev.key === 'ArrowDown') {
+                        ev.preventDefault();
+                        setActive(activeIdx + 1);
+                    } else if (ev.key === 'ArrowUp') {
+                        ev.preventDefault();
+                        setActive(activeIdx - 1);
+                    } else if (ev.key === 'Enter') {
+                        ev.preventDefault();
+                        select(activeIdx);
+                    }
+                };
+
+                setTimeout(() => {
+                    document.addEventListener('click', off);
+                    document.addEventListener('keydown', keyHandler);
+                }, 0);
+            }
+
+            // ---------- serialize blocks → markdown ----------
+            function serialize() {
+                const out = [];
+                let i = 0;
+                while (i < state.blocks.length) {
+                    const block = state.blocks[i];
+                    switch (block.type) {
+                        case 'h2':
+                            out.push(`## ${block.text}`);
+                            i++;
+                            break;
+                        case 'h3':
+                            out.push(`### ${block.text}`);
+                            i++;
+                            break;
+                        case 'quote':
+                            // each line of the block becomes its own > line
+                            out.push(block.text.split('\n').map(l => `> ${l}`).join('\n'));
+                            i++;
+                            break;
+                        case 'code':
+                            out.push('```\n' + block.text + '\n```');
+                            i++;
+                            break;
+                        case 'image':
+                            out.push(`![${block.alt || ''}](${block.src || ''})`);
+                            i++;
+                            break;
+                        case 'list':
+                            // group consecutive list blocks into one markdown list
+                            const items = [];
+                            while (i < state.blocks.length && state.blocks[i].type === 'list') {
+                                items.push(`- ${state.blocks[i].text}`);
+                                i++;
+                            }
+                            out.push(items.join('\n'));
+                            break;
+                        case 'paragraph':
+                        default:
+                            out.push(block.text);
+                            i++;
+                    }
+                }
+                return out.join('\n\n');
+            }
+
+            function buildFrontMatter() {
+                const title = document.getElementById('title').value || 'untitled';
+                const date = document.getElementById('date').value || new Date().toISOString().slice(0, 10);
+                const tags = document.getElementById('tags').value.trim();
+                const lines = ['---', 'layout: post', `title: "${title.replace(/"/g, '\\"')}"`, `date: ${date}`];
+                if (tags) {
+                    const t = tags.split(',').map(s => s.trim()).filter(Boolean);
+                    if (t.length) lines.push(`tags: [${t.join(', ')}]`);
+                }
+                lines.push('---');
+                return lines.join('\n');
+            }
+
+            function buildFullMarkdown() {
+                return buildFrontMatter() + '\n\n' + serialize();
+            }
+
+            function buildFilename() {
+                const title = document.getElementById('title').value || 'untitled';
+                const date = document.getElementById('date').value || new Date().toISOString().slice(0, 10);
+                const slug = title.toLowerCase().trim()
+                    .replace(/[^\w\s-]/g, '')
+                    .replace(/\s+/g, '-')
+                    .replace(/-+/g, '-') || 'untitled';
+                return `${date}-${slug}.md`;
+            }
+
+            // ---------- repo connection (same as before) ----------
+            const supportsFS = 'showDirectoryPicker' in window;
+            let repoHandle = null;
+            const topbar = document.getElementById('topbar');
+            const repoStatus = document.getElementById('repo-status');
+            const connectBtn = document.getElementById('connect-repo');
+            const saveBtn = document.getElementById('save');
+
+            function openDB() {
+                return new Promise((res, rej) => {
+                    const r = indexedDB.open('block-editor', 1);
+                    r.onupgradeneeded = () => r.result.createObjectStore('handles');
+                    r.onsuccess = () => res(r.result);
+                    r.onerror = () => rej(r.error);
+                });
+            }
+            async function dbSet(k, v) {
+                const db = await openDB();
+                return new Promise(res => {
+                    const tx = db.transaction('handles', 'readwrite');
+                    tx.objectStore('handles').put(v, k);
+                    tx.oncomplete = () => res();
+                });
+            }
+            async function dbGet(k) {
+                const db = await openDB();
+                return new Promise(res => {
+                    const tx = db.transaction('handles', 'readonly');
+                    const r = tx.objectStore('handles').get(k);
+                    r.onsuccess = () => res(r.result || null);
+                });
+            }
+
+            async function ensurePerm(handle) {
+                const opts = { mode: 'readwrite' };
+                if ((await handle.queryPermission(opts)) === 'granted') return true;
+                return (await handle.requestPermission(opts)) === 'granted';
+            }
+
+            function setConnected(handle) {
+                repoHandle = handle;
+                topbar.classList.add('connected');
+                repoStatus.innerHTML = `<span class="dot"></span>connected: <b>${handle.name}</b>`;
+                connectBtn.textContent = 'change';
+                saveBtn.disabled = false;
+            }
+
+            async function pickRepo() {
+                if (!supportsFS) { showToast('browser doesn\'t support direct saves', true); return; }
+                try {
+                    const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
+                    await dbSet('repo', handle);
+                    setConnected(handle);
+                } catch (err) {
+                    if (err.name !== 'AbortError') showToast('failed: ' + err.message, true);
+                }
+            }
+
+            connectBtn.addEventListener('click', pickRepo);
+
+            saveBtn.addEventListener('click', async () => {
+                if (!repoHandle) return;
+                if (!(await ensurePerm(repoHandle))) { showToast('permission denied', true); return; }
+                try {
+                    const postsDir = await repoHandle.getDirectoryHandle('_posts', { create: true });
+                    const name = buildFilename();
+                    const fh = await postsDir.getFileHandle(name, { create: true });
+                    const w = await fh.createWritable();
+                    await w.write(buildFullMarkdown());
+                    await w.close();
+                    showToast(`saved _posts/${name}`);
+                } catch (err) {
+                    showToast('save failed: ' + err.message, true);
+                }
+            });
+
+            function showToast(msg, isError) {
+                const toast = document.getElementById('toast');
+                toast.textContent = msg;
+                toast.classList.toggle('error', !!isError);
+                toast.classList.add('show');
+                clearTimeout(showToast._t);
+                showToast._t = setTimeout(() => toast.classList.remove('show'), 2200);
+            }
+
+            // try to restore previous repo
+            (async () => {
+                if (!supportsFS) return;
+                const saved = await dbGet('repo');
+                if (saved) {
+                    repoStatus.innerHTML = `<span class="dot"></span>last folder: <b>${saved.name}</b> — click to reconnect`;
+                    connectBtn.textContent = 'reconnect';
+                    connectBtn.removeEventListener('click', pickRepo);
+                    connectBtn.addEventListener('click', async () => {
+                        if (await ensurePerm(saved)) setConnected(saved);
+                        else showToast('permission denied', true);
+                    }, { once: true });
+                }
+            })();
+
+            // ---------- init ----------
+            document.getElementById('date').value = new Date().toISOString().slice(0, 10);
+            render();
+            // focus first block
+            setTimeout(() => focusBlock(state.blocks[0].id), 50);
+        })();
+    </script>
+</body>
+
+</html>
