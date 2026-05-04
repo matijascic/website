@@ -31,5 +31,3 @@ fn main() {
 ```
 
 i can also draft save and load
-
-check out [my fist post]({% post_url _posts/2026-05-03-my_first_post.md %}).
